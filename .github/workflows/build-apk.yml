@@ -2,9 +2,10 @@ name: Build ZaibEx Android APK
 
 on:
   workflow_dispatch:
+
   push:
     paths:
-      - 'ZaibEx_Android_V3_7_1_UI_UPDATE.zip'
+      - 'ZaibEx_Android_V3_7_2_PRO_FIX_FINAL.zip'
       - '.github/workflows/build-apk.yml'
 
 jobs:
@@ -12,74 +13,145 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      # ==========================================
+      # 1. CHECKOUT REPOSITORY
+      # ==========================================
       - name: Checkout repository
         uses: actions/checkout@v4
 
+
+      # ==========================================
+      # 2. SET UP JAVA 17
+      # ==========================================
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
+
+      # ==========================================
+      # 3. SET UP GRADLE
+      # ==========================================
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
+
+      # ==========================================
+      # 4. EXTRACT ZAIBEX PROJECT
+      # ==========================================
       - name: Extract ZaibEx project
         run: |
+          echo "Extracting ZaibEx V3.7.2..."
+
           rm -rf extracted
           mkdir extracted
-          unzip -q ZaibEx_Android_V3_7_1_UI_UPDATE.zip -d extracted
 
+          unzip -q \
+            ZaibEx_Android_V3_7_2_PRO_FIX_FINAL.zip \
+            -d extracted
+
+          echo "Extraction completed."
+
+
+      # ==========================================
+      # 5. FIND ANDROID PROJECT AUTOMATICALLY
+      # ==========================================
       - name: Find Android project
         id: project
         run: |
-          PROJECT_DIR=$(find extracted -name settings.gradle.kts -printf '%h\n' | head -n 1)
+
+          PROJECT_DIR=$(find extracted \
+            -name settings.gradle.kts \
+            -printf '%h\n' | head -n 1)
 
           if [ -z "$PROJECT_DIR" ]; then
-            PROJECT_DIR=$(find extracted -name settings.gradle -printf '%h\n' | head -n 1)
+
+            PROJECT_DIR=$(find extracted \
+              -name settings.gradle \
+              -printf '%h\n' | head -n 1)
+
           fi
 
           if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: Android project not found"
-            find extracted -maxdepth 4 -type f | sort
+
+            echo "ERROR: Android project not found."
+            echo "Contents of ZIP:"
+            find extracted -maxdepth 5 -type f | sort
+
             exit 1
+
           fi
 
-          echo "Android project found at: $PROJECT_DIR"
+          echo "Android project found:"
+          echo "$PROJECT_DIR"
+
           echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
 
+
+      # ==========================================
+      # 6. BUILD DEBUG APK
+      # ==========================================
       - name: Build ZaibEx APK
         working-directory: ${{ steps.project.outputs.dir }}
         run: |
+
+          echo "Building ZaibEx V3.7.2..."
+
           if [ -f "./gradlew" ]; then
+
             chmod +x ./gradlew
             ./gradlew clean assembleDebug --stacktrace
+
           else
+
             gradle clean assembleDebug --stacktrace
+
           fi
 
-      - name: Locate APK
+
+      # ==========================================
+      # 7. FIND GENERATED APK
+      # ==========================================
+      - name: Locate generated APK
         id: apk
         run: |
+
           APK=$(find "${{ steps.project.outputs.dir }}" \
             -path "*/build/outputs/apk/debug/*.apk" \
-            -type f | head -n 1)
+            -type f \
+            | head -n 1)
 
           if [ -z "$APK" ]; then
-            echo "ERROR: APK was not generated"
-            find "${{ steps.project.outputs.dir }}" -type f -name "*.apk" || true
+
+            echo "ERROR: APK was not generated."
+
+            find "${{ steps.project.outputs.dir }}" \
+              -type f \
+              -name "*.apk" || true
+
             exit 1
+
           fi
 
-          echo "APK found: $APK"
-          cp "$APK" ZaibEx-V3.7.1.apk
-          echo "apk=ZaibEx-V3.7.1.apk" >> "$GITHUB_OUTPUT"
+          echo "APK generated successfully:"
+          echo "$APK"
 
+          cp "$APK" ZaibEx-V3.7.2.apk
+
+          echo "apk=ZaibEx-V3.7.2.apk" \
+            >> "$GITHUB_OUTPUT"
+
+
+      # ==========================================
+      # 8. UPLOAD APK
+      # ==========================================
       - name: Upload ZaibEx APK
         uses: actions/upload-artifact@v4
         with:
-          name: ZaibEx-V3.7.1-APK
-          path: ZaibEx-V3.7.1.apk
+          name: ZaibEx-V3.7.2-APK
+          path: ZaibEx-V3.7.2.apk
           if-no-files-found: error
