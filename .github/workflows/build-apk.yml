@@ -1,10 +1,10 @@
-name: Build ZaibEx V3.4 APK
+name: Build ZaibEx V3.5 APK
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - 'ZaibEx_Android_V3_4_SEPARATE_APP.zip'
+      - 'ZaibEx_Android_V3_5_VISIBILITY_ICON_FIX.zip'
       - '.github/workflows/build-apk.yml'
 
 jobs:
@@ -26,53 +26,53 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Extract ZaibEx V3.4
+      - name: Extract ZaibEx V3.5
         run: |
           rm -rf extracted
           mkdir -p extracted
 
-          unzip -q ZaibEx_Android_V3_4_SEPARATE_APP.zip -d extracted
+          unzip -q ZaibEx_Android_V3_5_VISIBILITY_ICON_FIX.zip -d extracted
 
-          echo "=== ZAIBEX PROJECT CONTENT ==="
+          echo "=== ZAIBEX V3.5 EXTRACTED CONTENT ==="
           find extracted -maxdepth 3 -type f | sort | head -100
 
-      - name: Verify ZaibEx project
+      - name: Verify ZaibEx V3.5 project
         run: |
-          test -f extracted/ZaibEx_Android_V3_4_SEPARATE_APP/settings.gradle.kts
-          test -f extracted/ZaibEx_Android_V3_4_SEPARATE_APP/build.gradle.kts
-          test -f extracted/ZaibEx_Android_V3_4_SEPARATE_APP/app/build.gradle.kts
+          test -f extracted/ZaibEx_Android_V3_5_VISIBILITY_ICON_FIX/settings.gradle.kts
+          test -f extracted/ZaibEx_Android_V3_5_VISIBILITY_ICON_FIX/build.gradle.kts
+          test -f extracted/ZaibEx_Android_V3_5_VISIBILITY_ICON_FIX/app/build.gradle.kts
 
-          echo "ZaibEx V3.4 project verified"
+          echo "ZaibEx V3.5 project verified successfully"
 
       - name: Verify separate ZaibEx package
         run: |
           grep -q 'applicationId = "ae.zaibex.app"' \
-          extracted/ZaibEx_Android_V3_4_SEPARATE_APP/app/build.gradle.kts
+          extracted/ZaibEx_Android_V3_5_VISIBILITY_ICON_FIX/app/build.gradle.kts
 
-          echo "Confirmed: ZaibEx uses ae.zaibex.app"
-          echo "It will not replace NadEx."
+          echo "Confirmed package: ae.zaibex.app"
+          echo "ZaibEx will remain separate from NadEx."
 
-      - name: Build ZaibEx V3.4 APK
-        working-directory: extracted/ZaibEx_Android_V3_4_SEPARATE_APP
+      - name: Build ZaibEx V3.5 APK
+        working-directory: extracted/ZaibEx_Android_V3_5_VISIBILITY_ICON_FIX
         run: |
           gradle clean assembleDebug --stacktrace
 
       - name: Verify APK generated
         run: |
-          APK="extracted/ZaibEx_Android_V3_4_SEPARATE_APP/app/build/outputs/apk/debug/app-debug.apk"
+          APK="extracted/ZaibEx_Android_V3_5_VISIBILITY_ICON_FIX/app/build/outputs/apk/debug/app-debug.apk"
 
           if [ ! -f "$APK" ]; then
-            echo "ERROR: ZaibEx APK was not generated"
+            echo "ERROR: ZaibEx V3.5 APK was not generated"
             exit 1
           fi
 
-          echo "ZaibEx V3.4 APK successfully generated"
+          echo "ZaibEx V3.5 APK successfully generated"
           ls -lh "$APK"
 
-      - name: Upload ZaibEx V3.4 APK
+      - name: Upload ZaibEx V3.5 APK
         uses: actions/upload-artifact@v4
         with:
-          name: ZaibEx-V3-4-Separate-App-APK
-          path: extracted/ZaibEx_Android_V3_4_SEPARATE_APP/app/build/outputs/apk/debug/app-debug.apk
+          name: ZaibEx-V3-5-Visibility-Icon-Fix-APK
+          path: extracted/ZaibEx_Android_V3_5_VISIBILITY_ICON_FIX/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
