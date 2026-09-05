@@ -25,18 +25,20 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Extract ZaibEx Project
+      - name: Extract ZaibEx Package
+        shell: bash
         run: |
-          rm -rf "$RUNNER_TEMP/zaibex"
+          echo "Preparing ZaibEx V3.7.4..."
 
+          rm -rf "$RUNNER_TEMP/zaibex"
           mkdir -p "$RUNNER_TEMP/zaibex"
 
           unzip -q \
-            "ZaibEx_Android_V3_7_3_PRO_STABLE.zip" \
+            "ZaibEx_Android_V3_7_4_PRO_LOCKED.zip" \
             -d "$RUNNER_TEMP/zaibex"
 
-          echo "===== EXTRACTED FILES ====="
-          find "$RUNNER_TEMP/zaibex" -maxdepth 3 -type f | sort
+          echo "===== EXTRACTED PACKAGE ====="
+          find "$RUNNER_TEMP/zaibex" -maxdepth 4 -type f | sort
 
       - name: Find Android Project
         id: project
@@ -57,16 +59,16 @@ jobs:
           fi
 
           if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: Android project not found."
+            echo "ERROR: Android project could not be found."
             exit 1
           fi
 
-          echo "Android project found:"
+          echo "Android project:"
           echo "$PROJECT_DIR"
 
           echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
 
-      - name: Verify ZaibEx Project
+      - name: Verify ZaibEx Source
         shell: bash
         run: |
           cd "${{ steps.project.outputs.project_dir }}"
@@ -75,32 +77,33 @@ jobs:
           pwd
           ls -la
 
-          echo "===== APP MODULE ====="
-          ls -la app
-
-          echo "===== ZAIBEX PACKAGE CHECK ====="
-
-          grep -R \
-            'ae.zaibex.app' \
-            app/build.gradle* \
-            || true
-
+          echo "===== APP SOURCE ====="
           test -d app/src/main
 
-      - name: Build ZaibEx Debug APK
+          if [ ! -f "app/build.gradle.kts" ] && \
+             [ ! -f "app/build.gradle" ]; then
+            echo "ERROR: app/build.gradle file missing."
+            exit 1
+          fi
+
+          echo "ZaibEx Android source verified."
+
+      - name: Build Debug APK
         shell: bash
         run: |
           cd "${{ steps.project.outputs.project_dir }}"
 
+          echo "Building ZaibEx V3.7.4 PRO LOCKED..."
+
           gradle clean assembleDebug --stacktrace
 
-      - name: Locate APK
+      - name: Find Generated APK
         id: apk
         shell: bash
         run: |
           PROJECT="${{ steps.project.outputs.project_dir }}"
 
-          APK=$(find "$PROJECT/app/build/outputs/apk/debug" \
+          APK=$(find "$PROJECT/app/build/outputs/apk" \
             -type f \
             -name "*.apk" \
             | head -n 1)
@@ -110,21 +113,21 @@ jobs:
             exit 1
           fi
 
-          echo "APK generated:"
+          echo "Generated APK:"
           echo "$APK"
 
-          mkdir -p "$RUNNER_TEMP/output"
+          mkdir -p "$RUNNER_TEMP/final-apk"
 
           cp "$APK" \
-            "$RUNNER_TEMP/output/ZaibEx-V3.7.3-PRO-STABLE.apk"
+            "$RUNNER_TEMP/final-apk/ZaibEx-V3.7.4-PRO-LOCKED.apk"
 
-          echo "apk_path=$RUNNER_TEMP/output/ZaibEx-V3.7.3-PRO-STABLE.apk" \
+          echo "apk_path=$RUNNER_TEMP/final-apk/ZaibEx-V3.7.4-PRO-LOCKED.apk" \
             >> "$GITHUB_OUTPUT"
 
       - name: Upload ZaibEx APK
         uses: actions/upload-artifact@v4
         with:
-          name: ZaibEx-V3.7.3-PRO-STABLE-APK
+          name: ZaibEx-V3.7.4-PRO-LOCKED-APK
           path: ${{ steps.apk.outputs.apk_path }}
           if-no-files-found: error
           retention-days: 30
