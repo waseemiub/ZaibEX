@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'ZaibEx_Android_V3_6_NADEX_STYLE_ICON.zip'
+      - 'ZaibEx_Android_V3_7_1_UI_UPDATE.zip'
       - '.github/workflows/build-apk.yml'
 
 jobs:
@@ -30,16 +30,56 @@ jobs:
         run: |
           rm -rf extracted
           mkdir extracted
-          unzip -q ZaibEx_Android_V3_6_NADEX_STYLE_ICON.zip -d extracted
+          unzip -q ZaibEx_Android_V3_7_1_UI_UPDATE.zip -d extracted
+
+      - name: Find Android project
+        id: project
+        run: |
+          PROJECT_DIR=$(find extracted -name settings.gradle.kts -printf '%h\n' | head -n 1)
+
+          if [ -z "$PROJECT_DIR" ]; then
+            PROJECT_DIR=$(find extracted -name settings.gradle -printf '%h\n' | head -n 1)
+          fi
+
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "ERROR: Android project not found"
+            find extracted -maxdepth 4 -type f | sort
+            exit 1
+          fi
+
+          echo "Android project found at: $PROJECT_DIR"
+          echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
 
       - name: Build ZaibEx APK
-        working-directory: extracted/ZaibEx_Android_V3_6_NADEX_STYLE_ICON
+        working-directory: ${{ steps.project.outputs.dir }}
         run: |
-          gradle clean assembleDebug --stacktrace
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew clean assembleDebug --stacktrace
+          else
+            gradle clean assembleDebug --stacktrace
+          fi
+
+      - name: Locate APK
+        id: apk
+        run: |
+          APK=$(find "${{ steps.project.outputs.dir }}" \
+            -path "*/build/outputs/apk/debug/*.apk" \
+            -type f | head -n 1)
+
+          if [ -z "$APK" ]; then
+            echo "ERROR: APK was not generated"
+            find "${{ steps.project.outputs.dir }}" -type f -name "*.apk" || true
+            exit 1
+          fi
+
+          echo "APK found: $APK"
+          cp "$APK" ZaibEx-V3.7.1.apk
+          echo "apk=ZaibEx-V3.7.1.apk" >> "$GITHUB_OUTPUT"
 
       - name: Upload ZaibEx APK
         uses: actions/upload-artifact@v4
         with:
-          name: ZaibEx-V3-6-APK
-          path: extracted/ZaibEx_Android_V3_6_NADEX_STYLE_ICON/app/build/outputs/apk/debug/app-debug.apk
+          name: ZaibEx-V3.7.1-APK
+          path: ZaibEx-V3.7.1.apk
           if-no-files-found: error
